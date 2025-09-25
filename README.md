@@ -91,11 +91,12 @@ Set Weight = 0 to exclude from course total, or
 Click Hide if you want students to see only raw or only transmuted grades.
 
 ## 7 Limitations & Roadmap
-Area	Current behaviour	Planned
-Activity review pages	Show raw mark (Moodle default)	Optional sub-plugin per activity to show both
-Mobile app	Shows both columns	—
-Unit tests	Not yet included	PHPUnit coverage for edge cases
-Pull requests and issue reports are welcome!
+| Area |	Current behaviour |	Planned |
+|------------|------------------:|------------------:|
+| Activity review pages	| Show raw mark (Moodle default)	| Optional sub-plugin per activity to show both |
+| Mobile app	| Shows both columns	| — |
+| Unit tests	| Not yet included	| PHPUnit coverage for edge cases |
+
 
 ## 8 Uninstall
 Site administration → Plugins → Plugins overview → Uninstall
@@ -105,5 +106,6 @@ All shadow grade-items will be removed; raw grades remain untouched.
 GNU GPL v3 – see LICENSE.txt.
 
 Enjoy accurate, policy-compliant grade displays without losing your raw data!
+
 
 
