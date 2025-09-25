@@ -1,4 +1,3 @@
-markdown
 # Custom Grade Transmutation (local_customtransmute)
 
 A Moodle *local* plugin that converts raw scores into a custom 65-100 scale without altering the original grade data.  
@@ -101,3 +100,4 @@ All shadow grade-items will be removed; raw grades remain untouched.
 GNU GPL v3 – see LICENSE.txt.
 
 Enjoy accurate, policy-compliant grade displays without losing your raw data!
+
