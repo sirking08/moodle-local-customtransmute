@@ -60,6 +60,7 @@ The minimum floor can be changed in Site administration → Plugins → Local pl
 2. When any grade is written, it calculates the transmuted mark.
 3. It creates/updates a shadow grade-item (manual, 0–100 scale) linked to the source item.
 4. Standard grade reports then show a new column named “Activity name (Transmuted)”.
+
 Because it is a normal grade-item you can:
 - change its weight, hide/show it, put it in its own category, export it, etc.
 - leave course totals unaffected by setting its weight = 0 (optional).
@@ -105,6 +106,7 @@ All shadow grade-items will be removed; raw grades remain untouched.
 GNU GPL v3 – see LICENSE.txt.
 
 Enjoy accurate, policy-compliant grade displays without losing your raw data!
+
 
 
 
