@@ -73,18 +73,18 @@ Site administration → Plugins → Local plugins → Custom Transmutation.
 (Leave at 65 if unsure.)
 
 ## 6 Usage
-# 6.1 Automatic gradebook columns
+### 6.1 Automatic gradebook columns
 After installation any new or updated grade will spawn a “(Transmuted)” column.
 To create columns for existing grades, open
 Grades → Setup → Regrade all.
 
-# 6.2 Demo page
+### 6.2 Demo page
 Navigate to
 Site administration → Plugins → Local plugins → Custom Transmutation
 and click Grade Transmutation Demo.
 Enter a raw score and the total items to see the transmuted result using the current floor.
 
-# 6.3 Hiding or weighting columns
+### 6.3 Hiding or weighting columns
 1. Grades → Setup
 2. Click the edit icon next to the (Transmuted) item.
 - Set Weight = 0 to exclude from course total, or
@@ -106,6 +106,7 @@ All shadow grade-items will be removed; raw grades remain untouched.
 GNU GPL v3 – see LICENSE.txt.
 
 Enjoy accurate, policy-compliant grade displays without losing your raw data!
+
 
 
 
