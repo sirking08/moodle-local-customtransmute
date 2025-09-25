@@ -1,142 +1,103 @@
-<?php
-// This file is part of Moodle - http://moodle.org/
-//
-// Moodle is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Moodle is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/copyleft/gpl.html>.
+markdown
+# Custom Grade Transmutation (local_customtransmute)
 
-/**
- * Demo page for local_customtransmute
- *
- * @package    local_customtransmute
- * @copyright  2025 Your Name <your@email.com>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
+A Moodle *local* plugin that converts raw scores into a custom 65-100 scale without altering the original grade data.  
+It adds a mirrored **Custom Transmuted** column for every grade item and keeps it perfectly synchronised, so teachers and learners can see both:
 
-require_once('../../config.php');
-require_once($CFG->libdir.'/adminlib.php');
-require_login();
+| Grade item | Raw mark (Moodle) | Custom Transmuted |
+|------------|------------------:|------------------:|
+| Quiz 1     | 3 / 5 points      | **75 / 100** |
+| Assignment | 27 / 40 points    | **82 / 100** |
 
-// Check permissions
-$context = context_system::instance();
-require_capability('moodle/site:config', $context);
+## 1  Why?
 
-$PAGE->set_url(new moodle_url('/local/customtransmute/demo.php'));
-$PAGE->set_context($context);
-$PAGE->set_pagelayout('admin');
-$PAGE->set_title(get_string('demo', 'local_customtransmute'));
-$PAGE->set_heading(get_string('demo', 'local_customtransmute'));
+Philippine institutions often require the *60 % = 75 passing*, *0 % = 65* scale instead of Moodle’s default 0–100 %.  
+This plugin applies that rule everywhere **without** touching core code or losing the original scores.
 
-// Get the minimum floor from settings
-$minfloor = get_config('local_customtransmute', 'minfloor');
-if ($minfloor === false) {
-    $minfloor = 65; // Default value if not set
-}
+## 2  Formula
+l = 0.6 × n # 60 % threshold
+if e ≥ l: 75 – 100 span
+else if e ≥ l – 0.4: 74 # just below 60 %
+else: floor – 74
 
-// Process form submission
-$score = optional_param('score', '', PARAM_FLOAT);
-$total = optional_param('total', 100, PARAM_FLOAT);
-$transmuted = null;
-$error = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($score === '' || $total === '') {
-        $error = get_string('invalidinput', 'local_customtransmute');
-    } elseif (!is_numeric($score) || !is_numeric($total)) {
-        $error = get_string('invalidinput', 'local_customtransmute');
-    } elseif ($score < 0 || $total <= 0) {
-        $error = get_string('negativeinput', 'local_customtransmute');
-    } elseif ($score > $total) {
-        $error = get_string('scoreexceedstotal', 'local_customtransmute');
+In PHP (integer-rounded):
+
+```php
+function local_customtransmute_calculate(float $e, float $n, int $floor = 65): ?int {
+    if ($e < 0 || $e > $n || $n <= 0) {
+        return null;
+    }
+    $l = 0.6 * $n;
+    if ($e >= $l) {
+        $interval = 25 / ($n - $l);
+        return round(100 - ($n - $e) * $interval);
+    } elseif ($e >= $l - 0.4) {
+        return 74;
     } else {
-        require_once($CFG->dirroot . '/local/customtransmute/lib.php');
-        $transmuted = local_customtransmute_calculate($score, $total, $minfloor);
+        $interval = (74 - $floor) / ($l - 1);
+        return round(74 - $interval * ($l - 1 - $e));
     }
 }
+Key points
 
-echo $OUTPUT->header();
+0 % → floor (default = 65)
+59 % → 74 • 60 % → 75 • 100 % → 100
+Always rounded to a whole number.
+The minimum floor can be changed in Site administration → Plugins → Local plugins → Custom Transmutation.
 
-echo $OUTPUT->heading(get_string('demo', 'local_customtransmute'));
+3 Features
+Whole-number output (no decimals)
+Works for every grade source (quizzes, assignments, manual, imports, APIs)
+Adds an automatic (Transmuted) column—no course editing required
+Leaves the raw grade untouched (safe for auditing)
+Demo page for quick “what-if” calculations
+Language strings ready for translation
+Follows Moodle coding guidelines (no DB hacks)
+4 How it works
+The plugin listens to the global \core\event\grade_updated event.
+When any grade is written, it calculates the transmuted mark.
+It creates/updates a shadow grade-item (manual, 0–100 scale) linked to the source item.
+Standard grade reports then show a new column named “Activity name (Transmuted)”.
+Because it is a normal grade-item you can:
 
-echo html_writer::tag('p', get_string('minfloordesc', 'local_customtransmute') . ": $minfloor");
+change its weight, hide/show it, put it in its own category, export it, etc.
+leave course totals unaffected by setting its weight = 0 (optional).
+5 Installation
+Copy or git-clone this folder to MOODLE_ROOT/local/customtransmute.
+Log in as admin → Site administration → Notifications and complete the upgrade.
+Configure the Minimum grade floor under
+Site administration → Plugins → Local plugins → Custom Transmutation.
+(Leave at 65 if unsure.)
+6 Usage
+6.1 Automatic gradebook columns
+After installation any new or updated grade will spawn a “(Transmuted)” column.
+To create columns for existing grades, open
+Grades → Setup → Regrade all.
 
-// Display form
-$form = new html_form();
-$form->method = 'post';
-$form->action = new moodle_url('/local/customtransmute/demo.php');
-$form->class = 'mform';
+6.2 Demo page
+Navigate to
+Site administration → Plugins → Local plugins → Custom Transmutation
+and click Grade Transmutation Demo.
+Enter a raw score and the total items to see the transmuted result using the current floor.
 
-// Form elements
-$table = new html_table();
-$table->attributes['class'] = 'generaltable';
+6.3 Hiding or weighting columns
+Grades → Setup
+Click the edit icon next to the (Transmuted) item.
+Set Weight = 0 to exclude from course total, or
+Click Hide if you want students to see only raw or only transmuted grades.
+7 Limitations & Roadmap
+Area	Current behaviour	Planned
+Activity review pages	Show raw mark (Moodle default)	Optional sub-plugin per activity to show both
+Mobile app	Shows both columns	—
+Unit tests	Not yet included	PHPUnit coverage for edge cases
+Pull requests and issue reports are welcome!
 
-// Score input
-$scorecell = new html_table_cell(html_writer::label(get_string('score', 'local_customtransmute'), 'score'));
-$scoreinput = html_writer::empty_tag('input', [
-    'type' => 'number',
-    'name' => 'score',
-    'id' => 'score',
-    'step' => '0.01',
-    'min' => '0',
-    'value' => $score !== '' ? $score : '',
-    'required' => true
-]);
-$scorecell2 = new html_table_cell($scoreinput);
+8 Uninstall
+Site administration → Plugins → Plugins overview → Uninstall
+All shadow grade-items will be removed; raw grades remain untouched.
 
-// Total items input
-$totalcell = new html_table_cell(html_writer::label(get_string('totalitems', 'local_customtransmute'), 'total'));
-$totalinput = html_writer::empty_tag('input', [
-    'type' => 'number',
-    'name' => 'total',
-    'id' => 'total',
-    'step' => '1',
-    'min' => '1',
-    'value' => $total,
-    'required' => true
-]);
-$totalcell2 = new html_table_cell($totalinput);
+9 License
+GNU GPL v3 – see LICENSE.txt.
 
-// Submit button
-$submitcell = new html_table_cell(html_writer::empty_tag('input', [
-    'type' => 'submit',
-    'value' => get_string('calculate', 'local_customtransmute'),
-    'class' => 'btn btn-primary'
-]));
-$submitcell->colspan = 2;
-
-// Add rows to table
-$table->data = [
-    [$scorecell, $scorecell2],
-    [$totalcell, $totalcell2],
-    [$submitcell]
-];
-
-// Display form
-echo html_writer::tag('form', html_writer::table($table), [
-    'method' => 'post',
-    'action' => $form->action->out(false),
-    'class' => 'mform'
-]);
-
-// Display result or error
-if ($error) {
-    echo $OUTPUT->notification($error, 'error');
-} elseif ($transmuted !== null) {
-    $percentage = $total > 0 ? round(($score / $total) * 100, 2) : 0;
-    
-    $result = html_writer::tag('h4', get_string('transmutedgrade', 'local_customtransmute') . ": $transmuted");
-    $result .= html_writer::tag('p', "Score: $score / $total ($percentage%)");
-    
-    echo $OUTPUT->box($result, 'generalbox', 'transmutation-result');
-}
-
-echo $OUTPUT->footer();
+Enjoy accurate, policy-compliant grade displays without losing your raw data!
