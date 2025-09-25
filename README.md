@@ -56,19 +56,18 @@ The minimum floor can be changed in Site administration → Plugins → Local pl
 - Follows Moodle coding guidelines (no DB hacks)
 
 ## 4 How it works
-The plugin listens to the global \core\event\grade_updated event.
-When any grade is written, it calculates the transmuted mark.
-It creates/updates a shadow grade-item (manual, 0–100 scale) linked to the source item.
-Standard grade reports then show a new column named “Activity name (Transmuted)”.
+1. The plugin listens to the global \core\event\grade_updated event.
+2. When any grade is written, it calculates the transmuted mark.
+3. It creates/updates a shadow grade-item (manual, 0–100 scale) linked to the source item.
+4. Standard grade reports then show a new column named “Activity name (Transmuted)”.
 Because it is a normal grade-item you can:
-
-change its weight, hide/show it, put it in its own category, export it, etc.
-leave course totals unaffected by setting its weight = 0 (optional).
+- change its weight, hide/show it, put it in its own category, export it, etc.
+- leave course totals unaffected by setting its weight = 0 (optional).
 
 ## 5 Installation
-Copy or git-clone this folder to MOODLE_ROOT/local/customtransmute.
-Log in as admin → Site administration → Notifications and complete the upgrade.
-Configure the Minimum grade floor under
+1. Copy or git-clone this folder to MOODLE_ROOT/local/customtransmute.
+2. Log in as admin → Site administration → Notifications and complete the upgrade.
+3. Configure the Minimum grade floor under
 Site administration → Plugins → Local plugins → Custom Transmutation.
 (Leave at 65 if unsure.)
 
@@ -85,10 +84,10 @@ and click Grade Transmutation Demo.
 Enter a raw score and the total items to see the transmuted result using the current floor.
 
 6.3 Hiding or weighting columns
-Grades → Setup
-Click the edit icon next to the (Transmuted) item.
-Set Weight = 0 to exclude from course total, or
-Click Hide if you want students to see only raw or only transmuted grades.
+1. Grades → Setup
+2. Click the edit icon next to the (Transmuted) item.
+- Set Weight = 0 to exclude from course total, or
+- Click Hide if you want students to see only raw or only transmuted grades.
 
 ## 7 Limitations & Roadmap
 | Area |	Current behaviour |	Planned |
@@ -106,6 +105,7 @@ All shadow grade-items will be removed; raw grades remain untouched.
 GNU GPL v3 – see LICENSE.txt.
 
 Enjoy accurate, policy-compliant grade displays without losing your raw data!
+
 
 
 
