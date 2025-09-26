@@ -69,7 +69,7 @@ defined('MOODLE_INTERNAL') || die();
         // Create via grade_update.
         grade_update('local_customtransmute', $item->courseid,
             'manual', 'local_customtransmute', $item->id, 0,
-            [], ['deleted' => 0, 'itemdetails' => (array)$shadowitem]);
+             null, (array)$shadowitem);
 
         // Refetch shadow item safely.
         $shadowitem = $DB->get_record('grade_items', [
