@@ -61,7 +61,7 @@ defined('MOODLE_INTERNAL') || die();
         $shadowitem->itemtype      = 'manual';
         $shadowitem->itemmodule    = 'local_customtransmute';
         $shadowitem->iteminstance  = $item->id;
-        $shadowitem->itemname      = $item->get_name() . ' (Transmuted)';
+        $shadowitem->itemname      = $item->itemname . ' (Transmuted)';
         $shadowitem->grademax      = 100;
         $shadowitem->grademin      = 0;
         $shadowitem->hidden        = $item->hidden;
@@ -69,7 +69,7 @@ defined('MOODLE_INTERNAL') || die();
         // Create via grade_update.
         grade_update('local_customtransmute', $item->courseid,
             'manual', 'local_customtransmute', $item->id, 0,
-            null, ['deleted' => 0, 'itemdetails' => (array)$shadowitem]);
+            [], ['deleted' => 0, 'itemdetails' => (array)$shadowitem]);
 
         // Refetch shadow item safely.
         $shadowitem = $DB->get_record('grade_items', [

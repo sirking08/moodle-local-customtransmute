@@ -29,7 +29,7 @@ defined('MOODLE_INTERNAL') || die();
  *
  * @return bool
  */
-function xmldb_local_customtransmute_install() {
+function xmldb_local_customtransmute_upgrade($oldversion) {
     global $CFG;
     
     // Set default configuration values
