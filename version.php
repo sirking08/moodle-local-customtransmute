@@ -18,14 +18,14 @@
  * Version details
  *
  * @package    local_customtransmute
- * @copyright  2025 Your Name <your@email.com>
+ * @copyright  2025 Ezekiel Lozano <sirking08@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_customtransmute';
-$plugin->version = 2024092400;
+$plugin->version = 2025092400;
 $plugin->requires = 2022112800; // Requires Moodle 4.1+
 $plugin->maturity = MATURITY_STABLE;
 $plugin->release = '1.0.0';

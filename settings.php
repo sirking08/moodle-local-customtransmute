@@ -18,7 +18,7 @@
  * Plugin settings for the local_customtransmute plugin.
  *
  * @package    local_customtransmute
- * @copyright  2025 Your Name <your@email.com>
+ * @copyright  2025 Ezekiel Lozano <sirking08@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

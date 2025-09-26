@@ -18,7 +18,7 @@
  * Demo page for local_customtransmute
  *
  * @package    local_customtransmute
- * @copyright  2025 Your Name <your@email.com>
+ * @copyright  2025 Ezekiel Lozano <sirking08@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -70,7 +70,10 @@ echo $OUTPUT->heading(get_string('demo', 'local_customtransmute'));
 echo html_writer::tag('p', get_string('minfloordesc', 'local_customtransmute') . ": $minfloor");
 
 // Display form
-$actionurl = new moodle_url('/local/customtransmute/demo.php');
+$form = new html_form();
+$form->method = 'post';
+$form->action = new moodle_url('/local/customtransmute/demo.php');
+$form->class = 'mform';
 
 // Form elements
 $table = new html_table();
@@ -120,7 +123,7 @@ $table->data = [
 // Display form
 echo html_writer::tag('form', html_writer::table($table), [
     'method' => 'post',
-    'action' => $actionurl->out(false),
+    'action' => $form->action->out(false),
     'class' => 'mform'
 ]);
 

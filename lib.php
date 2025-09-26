@@ -18,90 +18,118 @@
  * Library of functions for local_customtransmute.
  *
  * @package    local_customtransmute
- * @copyright  2025 Your Name <your@email.com>
+ * @copyright  2025 Ezekiel Lozano <sirking08@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Hook function to modify the grade calculation.
+ * Event observer for grade updates.
  *
- * @param stdClass $grade_grade The grade_grade object being updated.
- * @param stdClass $grade_item The grade_item object.
- * @param bool $is_update Whether this is an update or an insert.
- * @return bool True if the grade was modified, false otherwise.
+ * @param \core\event\grade_updated $event
+ * @return void
  */
-function local_customtransmute_grade_item_update($grade_grade, $grade_item, $is_update) {
-    global $CFG;
-    
-    // Only process if this is a manual grade item or a module that uses raw grades
-    if ($grade_item->itemtype == 'manual' || $grade_item->itemtype == 'mod') {
-        $rawgrade = $grade_grade->rawgrade;
-        $rawgrademax = $grade_item->grademax;
-        
-        // Skip if rawgrade is not set or is already a percentage
-        if ($rawgrade === null || $rawgrademax <= 0) {
-            return false;
-        }
-        
-        // Get the minimum floor from settings
-        $minfloor = get_config('local_customtransmute', 'minfloor');
-        if ($minfloor === false) {
-            $minfloor = 65; // Default value if not set
-        }
-        
-        // Calculate the percentage
-        $percentage = ($rawgrade / $rawgrademax) * 100;
-        
-        // Apply custom transmutation
-        $transmuted = local_customtransmute_calculate($percentage, 100, $minfloor);
-        
-        if ($transmuted !== null) {
-            // Update the final grade with the transmuted value
-            $grade_grade->finalgrade = $transmuted;
-            return true;
-        }
+ function local_customtransmute_handle_grade_updated(\core\event\grade_updated $event): void {
+    global $DB;
+
+    // Get grade + item.
+    $grade = $DB->get_record('grade_grades', ['id' => $event->objectid], '*', MUST_EXIST);
+    $item  = $DB->get_record('grade_items', ['id' => $grade->itemid], '*', MUST_EXIST);
+
+    // Skip if this is already a customtransmute item → prevent recursion.
+    if ($item->itemmodule === 'local_customtransmute') {
+        return;
     }
-    
-    return false;
+
+    // Only numeric value items.
+    if ($item->gradetype != GRADE_TYPE_VALUE || $item->grademax <= 0) {
+        return;
+    }
+
+    // Find (or create) shadow grade item.
+    $shadowitem = $DB->get_record('grade_items', [
+        'courseid'     => $item->courseid,
+        'itemtype'     => 'manual',
+        'itemmodule'   => 'local_customtransmute',
+        'iteminstance' => $item->id
+    ]);
+
+    if (!$shadowitem) {
+        $shadowitem = new stdClass();
+        $shadowitem->courseid      = $item->courseid;
+        $shadowitem->itemtype      = 'manual';
+        $shadowitem->itemmodule    = 'local_customtransmute';
+        $shadowitem->iteminstance  = $item->id;
+        $shadowitem->itemname      = $item->get_name() . ' (Transmuted)';
+        $shadowitem->grademax      = 100;
+        $shadowitem->grademin      = 0;
+        $shadowitem->hidden        = $item->hidden;
+
+        // Create via grade_update.
+        grade_update('local_customtransmute', $item->courseid,
+            'manual', 'local_customtransmute', $item->id, 0,
+            null, ['deleted' => 0, 'itemdetails' => (array)$shadowitem]);
+
+        // Refetch shadow item safely.
+        $shadowitem = $DB->get_record('grade_items', [
+            'courseid'     => $item->courseid,
+            'itemtype'     => 'manual',
+            'itemmodule'   => 'local_customtransmute',
+            'iteminstance' => $item->id
+        ], '*', MUST_EXIST);
+    }
+
+    // Calculate transmuted grade.
+    $minfloor   = (int)get_config('local_customtransmute', 'minfloor') ?: 65;
+    if ($grade->finalgrade === null) {
+        return; // nothing to do
+    }
+    $rawpercent = ($grade->finalgrade / $item->grademax) * 100;
+    $trans      = local_customtransmute_calculate($rawpercent, 100, $minfloor);
+
+    if ($trans === null) {
+        return;
+    }
+
+    // Insert/update grade in shadow item.
+    grade_update('local_customtransmute', $item->courseid,
+        'manual', 'local_customtransmute', $item->id, 0,
+        [
+            'userid'     => $grade->userid,
+            'rawgrade'   => $trans,
+            'finalgrade' => $trans
+        ]);
 }
 
 /**
  * Calculate the transmuted grade based on the raw score and total items.
  *
- * @param float $e The raw score
- * @param float $n The maximum possible score
- * @param int $minfloor The minimum grade floor (default: 65)
- * @return float|null The transmuted grade or null if invalid input
+ * @param float $e Raw score
+ * @param float $n Maximum possible score (normally 100)
+ * @param int   $minfloor Minimum grade floor (default: 65)
+ * @return float|null
  */
 function local_customtransmute_calculate($e, $n, $minfloor = 65) {
-    // Input validation
+	// Input validation
     if ($e < 0 || $n <= 0) {
         return null;
     }
-    
+
     // Calculate the 60% threshold
     $l = 0.6 * $n;
-    
+
     // Apply the transmutation formula
     if ($e >= $l) {
-        // 60% and above → 75-100
+        // 60% and above → 75–100
         $interval = 25 / ($n - $l);
-        // return round(100 - ($n - $e) * $interval, 2);
-        // Return whole number grade (no decimals).
         return round(100 - ($n - $e) * $interval);
     } else if ($e >= $l - 0.4 && $e < $l) {
-        // Just below 60% → 74
+        // Just below 60% → fixed 74
         return 74;
     } else {
-        // 0-59% → floor-74
+        // 0–59% → minfloor–74
         $interval = (74 - $minfloor) / ($l - 1);
-        // return round(74 - $interval * ($l - 1 - $e), 2);
-        // Return whole number grade (no decimals).
         return round(74 - $interval * ($l - 1 - $e));
     }
 }
-
-// Register the grade update hook
-$CFG->hooks_callback['grade_item_update'][] = 'local_customtransmute_grade_item_update';
