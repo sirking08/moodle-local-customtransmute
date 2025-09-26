@@ -70,10 +70,7 @@ echo $OUTPUT->heading(get_string('demo', 'local_customtransmute'));
 echo html_writer::tag('p', get_string('minfloordesc', 'local_customtransmute') . ": $minfloor");
 
 // Display form
-$form = new html_form();
-$form->method = 'post';
-$form->action = new moodle_url('/local/customtransmute/demo.php');
-$form->class = 'mform';
+$actionurl = new moodle_url('/local/customtransmute/demo.php');
 
 // Form elements
 $table = new html_table();
@@ -123,7 +120,7 @@ $table->data = [
 // Display form
 echo html_writer::tag('form', html_writer::table($table), [
     'method' => 'post',
-    'action' => $form->action->out(false),
+    'action' => $actionurl->out(false),
     'class' => 'mform'
 ]);
 
