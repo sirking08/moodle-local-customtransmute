@@ -22,18 +22,60 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Install the plugin.
+ * Upgrade steps for local_customtransmute.
  *
+ * @param int $oldversion
  * @return bool
  */
 function xmldb_local_customtransmute_upgrade($oldversion) {
-    global $CFG;
-    
-    // Set default configuration values
-    set_config('minfloor', 65, 'local_customtransmute');
-    
+    global $DB;
+
+    // Example: initial install sets defaults and backfills shadow items.
+    if ($oldversion < 2025092600) {
+
+        // Ensure default config exists.
+        if (get_config('local_customtransmute', 'minfloor') === false) {
+            set_config('minfloor', 65, 'local_customtransmute');
+        }
+
+        // Scan all grade_items in the site.
+        $items = $DB->get_records('grade_items', [
+            'gradetype' => GRADE_TYPE_VALUE
+        ]);
+
+        foreach ($items as $item) {
+            // Skip our own items.
+            if ($item->itemmodule === 'local_customtransmute') {
+                continue;
+            }
+
+            // Already has a shadow?
+            $shadow = $DB->get_record('grade_items', [
+                'courseid'     => $item->courseid,
+                'itemtype'     => 'manual',
+                'itemmodule'   => 'local_customtransmute',
+                'iteminstance' => $item->id
+            ]);
+
+            if (!$shadow) {
+                grade_update('local_customtransmute', $item->courseid,
+                    'manual', 'local_customtransmute', $item->id, 0,
+                    null, [
+                        'itemname'   => $item->itemname . ' (Transmuted)',
+                        'gradetype'  => GRADE_TYPE_VALUE,
+                        'grademax'   => 100,
+                        'grademin'   => 0,
+                        'hidden'     => $item->hidden
+                    ]);
+            }
+        }
+
+        upgrade_plugin_savepoint(true, 2025092600, 'local', 'customtransmute');
+    }
+
     return true;
 }

@@ -29,11 +29,10 @@ defined('MOODLE_INTERNAL') || die();
  *
  * @return bool
  */
+
 function xmldb_local_customtransmute_install() {
-    global $CFG;
-    
-    // Set default configuration values
-    set_config('minfloor', 65, 'local_customtransmute');
-    
+    if (get_config('local_customtransmute', 'minfloor') === false) {
+        set_config('minfloor', 65, 'local_customtransmute');
+    }
     return true;
 }

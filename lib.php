@@ -25,66 +25,84 @@
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Event observer for grade updates.
+ * Create a shadow transmuted grade item when a new grade item is created.
  *
- * @param \core\event\grade_updated $event
- * @return void
+ * @param \core\event\grade_item_created $event
  */
- function local_customtransmute_handle_grade_updated(\core\event\grade_updated $event): void {
+function local_customtransmute_handle_grade_item_created(\core\event\grade_item_created $event): void {
     global $DB;
 
-    // Get grade + item.
-    $grade = $DB->get_record('grade_grades', ['id' => $event->objectid], '*', MUST_EXIST);
-    $item  = $DB->get_record('grade_items', ['id' => $grade->itemid], '*', MUST_EXIST);
+    $item = $DB->get_record('grade_items', ['id' => $event->objectid], '*', MUST_EXIST);
 
-    // Skip if this is already a customtransmute item → prevent recursion.
+    // Skip recursion — don’t create a shadow for our own items.
     if ($item->itemmodule === 'local_customtransmute') {
         return;
     }
 
-    // Only numeric value items.
+    // Only apply to numeric grade items.
     if ($item->gradetype != GRADE_TYPE_VALUE || $item->grademax <= 0) {
         return;
     }
 
-    // Find (or create) shadow grade item.
-    $shadowitem = $DB->get_record('grade_items', [
+    // Ensure a shadow doesn't already exist.
+    $shadow = $DB->get_record('grade_items', [
         'courseid'     => $item->courseid,
         'itemtype'     => 'manual',
         'itemmodule'   => 'local_customtransmute',
         'iteminstance' => $item->id
     ]);
 
-    if (!$shadowitem) {
-        $shadowitem = new stdClass();
-        $shadowitem->courseid      = $item->courseid;
-        $shadowitem->itemtype      = 'manual';
-        $shadowitem->itemmodule    = 'local_customtransmute';
-        $shadowitem->iteminstance  = $item->id;
-        $shadowitem->itemname      = $item->itemname . ' (Transmuted)';
-        $shadowitem->grademax      = 100;
-        $shadowitem->grademin      = 0;
-        $shadowitem->hidden        = $item->hidden;
-
-        // Create via grade_update.
+    if (!$shadow) {
         grade_update('local_customtransmute', $item->courseid,
             'manual', 'local_customtransmute', $item->id, 0,
-             null, (array)$shadowitem);
+            null, [
+                'itemname'   => $item->itemname . ' (Transmuted)',
+                'gradetype'  => GRADE_TYPE_VALUE,
+                'grademax'   => 100,
+                'grademin'   => 0,
+                'hidden'     => $item->hidden
+            ]);
+    }
+}
 
-        // Refetch shadow item safely.
-        $shadowitem = $DB->get_record('grade_items', [
-            'courseid'     => $item->courseid,
-            'itemtype'     => 'manual',
-            'itemmodule'   => 'local_customtransmute',
-            'iteminstance' => $item->id
-        ], '*', MUST_EXIST);
+/**
+ * Update the transmuted grade when a grade value changes.
+ *
+ * @param \core\event\grade_updated $event
+ */
+function local_customtransmute_handle_grade_updated(\core\event\grade_updated $event): void {
+    global $DB;
+
+    $grade = $DB->get_record('grade_grades', ['id' => $event->objectid], '*', MUST_EXIST);
+    $item  = $DB->get_record('grade_items', ['id' => $grade->itemid], '*', MUST_EXIST);
+
+    if ($item->itemmodule === 'local_customtransmute') {
+        return; // skip recursion
     }
 
-    // Calculate transmuted grade.
-    $minfloor   = (int)get_config('local_customtransmute', 'minfloor') ?: 65;
+    if ($item->gradetype != GRADE_TYPE_VALUE || $item->grademax <= 0) {
+        return;
+    }
+
+    // Make sure the shadow exists (safety check).
+    local_customtransmute_handle_grade_item_created(
+        (object)['objectid' => $item->id]
+    );
+
+    // Fetch shadow.
+    $shadow = $DB->get_record('grade_items', [
+        'courseid'     => $item->courseid,
+        'itemtype'     => 'manual',
+        'itemmodule'   => 'local_customtransmute',
+        'iteminstance' => $item->id
+    ], '*', MUST_EXIST);
+
     if ($grade->finalgrade === null) {
-        return; // nothing to do
+        return;
     }
+
+    // Apply transmutation.
+    $minfloor   = (int)get_config('local_customtransmute', 'minfloor') ?: 65;
     $rawpercent = ($grade->finalgrade / $item->grademax) * 100;
     $trans      = local_customtransmute_calculate($rawpercent, 100, $minfloor);
 
@@ -92,7 +110,6 @@ defined('MOODLE_INTERNAL') || die();
         return;
     }
 
-    // Insert/update grade in shadow item.
     grade_update('local_customtransmute', $item->courseid,
         'manual', 'local_customtransmute', $item->id, 0,
         [
@@ -101,6 +118,7 @@ defined('MOODLE_INTERNAL') || die();
             'finalgrade' => $trans
         ]);
 }
+
 
 /**
  * Calculate the transmuted grade based on the raw score and total items.
