@@ -54,4 +54,13 @@ if ($hassiteconfig) {
             ['class' => 'btn btn-secondary']
         )
     ));
+
+    // Add enable logging option
+    $settings->add(new admin_setting_configcheckbox(
+        'local_customtransmute/enablelogging',
+        get_string('enablelogging', 'local_customtransmute'),
+        get_string('enablelogging_desc', 'local_customtransmute'),
+        0
+    ));
+    
 }

@@ -37,3 +37,5 @@ $string['calculate'] = 'Calculate';
 $string['invalidinput'] = 'Please enter valid numbers for both score and total items.';
 $string['scoreexceedstotal'] = 'Score cannot exceed total items';
 $string['negativeinput'] = 'Score and total items must be non-negative numbers';
+$string['enablelogging'] = 'Enable debug logging';
+$string['enablelogging_desc'] = 'If enabled, CustomTransmute will log grade updates and shadow item creation events to developer debug and cron logs.';
