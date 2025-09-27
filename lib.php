@@ -22,6 +22,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+
 defined('MOODLE_INTERNAL') || die();
 
 /**
@@ -49,18 +50,21 @@ function local_customtransmute_handle_grade_updated(\core\event\grade_updated $e
 
         // Skip recursion
         if ($item->itemmodule === 'local_customtransmute') {
+            debugging("Skip recursion: item {$item->id} is already a transmuted grade item.", DEBUG_DEVELOPER);
             $transaction->allow_commit();
             return;
         }
 
         // Only numeric items
         if ($item->gradetype != GRADE_TYPE_VALUE || $item->grademax <= 0) {
+            debugging("Skip item {$item->id}: non-numeric or invalid grademax.", DEBUG_DEVELOPER);
             $transaction->allow_commit();
             return;
         }
 
         // Skip empty grades
         if ($grade->finalgrade === null) {
+            debugging("Skip grade {$grade->id}: no final grade yet.", DEBUG_DEVELOPER);
             $transaction->allow_commit();
             return;
         }
@@ -74,6 +78,9 @@ function local_customtransmute_handle_grade_updated(\core\event\grade_updated $e
         ]);
 
         if (!$shadow) {
+            debugging("Creating shadow grade item for original item {$item->id}.", DEBUG_DEVELOPER);
+            mtrace("CustomTransmute: Creating shadow for item {$item->id} ({$item->itemname})");
+
             grade_update('local_customtransmute', $item->courseid,
                 'manual', 'local_customtransmute', $item->id, 0,
                 null, [
@@ -100,6 +107,9 @@ function local_customtransmute_handle_grade_updated(\core\event\grade_updated $e
         if ($trans !== null) {
             $trans = max(0, min(100, $trans));
 
+            debugging("Updating transmuted grade for user {$grade->userid} → {$trans}", DEBUG_DEVELOPER);
+            mtrace("CustomTransmute: User {$grade->userid} item {$item->id} → {$trans}");
+
             grade_update('local_customtransmute', $item->courseid,
                 'manual', 'local_customtransmute', $item->id, 0,
                 [
@@ -107,6 +117,8 @@ function local_customtransmute_handle_grade_updated(\core\event\grade_updated $e
                     'rawgrade'   => $trans,
                     'finalgrade' => $trans
                 ]);
+        } else {
+            debugging("No transmutation result for grade {$grade->id}.", DEBUG_DEVELOPER);
         }
 
         $transaction->allow_commit();
@@ -114,6 +126,7 @@ function local_customtransmute_handle_grade_updated(\core\event\grade_updated $e
     } catch (Exception $e) {
         $transaction->rollback($e);
         debugging('Error in customtransmute grade update: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        mtrace('CustomTransmute ERROR: ' . $e->getMessage());
     }
 }
 
